@@ -28,6 +28,26 @@
     return Constructor;
   }
 
+  function _toConsumableArray(arr) {
+    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+  }
+
+  function _arrayWithoutHoles(arr) {
+    if (Array.isArray(arr)) {
+      for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+      return arr2;
+    }
+  }
+
+  function _iterableToArray(iter) {
+    if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+  }
+
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance");
+  }
+
   var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
   function commonjsRequire () {
@@ -36729,10 +36749,10 @@
 
     }, {
       key: "initWithArrayBuffer",
-      value: function initWithArrayBuffer(array, audioType) {
+      value: function initWithArrayBuffer(array) {
         var _this2 = this;
 
-        this._wbAudioType = audioType;
+        this._wbAudioType = this.getAudioType(array);
 
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36741,7 +36761,7 @@
         this._playEmpty();
 
         return new Promise(function (resolve, reject) {
-          if (audioType && audioType === 'audio/amr-wb') {
+          if (_this2._wbAudioType === 'audio/amr-wb') {
             var u8Array = new Uint8Array(array);
 
             _this2.decodeAMRWBAsync(u8Array).then(function (samples) {
@@ -36804,10 +36824,8 @@
 
     }, {
       key: "initWithBlob",
-      value: function initWithBlob(blob, audioType) {
+      value: function initWithBlob(blob) {
         var _this3 = this;
-
-        this._wbAudioType = audioType;
 
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36826,7 +36844,7 @@
           reader.readAsArrayBuffer(blob);
         });
         return p.then(function (data) {
-          return _this3.initWithArrayBuffer(data, audioType);
+          return _this3.initWithArrayBuffer(data);
         });
       }
       /**
@@ -36837,10 +36855,8 @@
 
     }, {
       key: "initWithUrl",
-      value: function initWithUrl(url, audioType) {
+      value: function initWithUrl(url) {
         var _this4 = this;
-
-        this._wbAudioType = audioType;
 
         if (this._isInit || this._isInitRecorder) {
           BenzAMRRecorder.throwAlreadyInitialized();
@@ -36864,7 +36880,7 @@
           xhr.send();
         });
         return p.then(function (array) {
-          return _this4.initWithArrayBuffer(array, audioType);
+          return _this4.initWithArrayBuffer(array);
         });
       }
       /**
@@ -36893,13 +36909,26 @@
         });
       }
       /**
-       * init 之前先播放一个空音频。
-       * 因为有些环境（如iOS）播放首个音频时禁止自动、异步播放，
-       * 播放空音频防止加载后立即播放的功能失效。
-       * 但即使如此，init* 仍然须放入一个用户事件中
-       * @private
+       * 根据文件头判断文件类型
+       * @param {Float32Array} array 
        */
 
+    }, {
+      key: "getAudioType",
+      value: function getAudioType(array) {
+        var headerArray = new Int8Array(array.slice(0, 8));
+        var header = String.fromCharCode.apply(String, _toConsumableArray(headerArray));
+
+        if (header === '#!AMR-WB') {
+          return 'audio/amr-wb';
+        }
+
+        if (header.includes('AMR')) {
+          return 'audio/amr';
+        }
+
+        return 'audio/other';
+      }
     }, {
       key: "on",
       value: function on(action, fn) {

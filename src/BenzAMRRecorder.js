@@ -80,14 +80,14 @@ export default class BenzAMRRecorder {
      * @param {Float32Array} array
      * @return {Promise}
      */
-    initWithArrayBuffer(array, audioType) {
-        this._wbAudioType = audioType;
+    initWithArrayBuffer(array) {
+        this._wbAudioType = this.getAudioType(array);
         if (this._isInit || this._isInitRecorder) {
             BenzAMRRecorder.throwAlreadyInitialized();
         }
         this._playEmpty();
         return new Promise((resolve, reject) => {
-            if(audioType && audioType === 'audio/amr-wb') {
+            if(this._wbAudioType === 'audio/amr-wb') {
                 let u8Array = new Uint8Array(array);
                 this.decodeAMRWBAsync(u8Array).then((samples) => {
                     this._samples = samples;
@@ -146,8 +146,7 @@ export default class BenzAMRRecorder {
      * @param {Blob} blob
      * @return {Promise}
      */
-    initWithBlob(blob, audioType) {
-        this._wbAudioType = audioType;
+    initWithBlob(blob) {
         if (this._isInit || this._isInitRecorder) {
             BenzAMRRecorder.throwAlreadyInitialized();
         }
@@ -161,7 +160,7 @@ export default class BenzAMRRecorder {
             reader.readAsArrayBuffer(blob);
         });
         return p.then((data) => {
-            return this.initWithArrayBuffer(data, audioType);
+            return this.initWithArrayBuffer(data);
         });
     }
 
@@ -170,8 +169,7 @@ export default class BenzAMRRecorder {
      * @param {string} url
      * @return {Promise}
      */
-    initWithUrl(url, audioType) {
-        this._wbAudioType = audioType;
+    initWithUrl(url) {
         if (this._isInit || this._isInitRecorder) {
             BenzAMRRecorder.throwAlreadyInitialized();
         }
@@ -189,7 +187,7 @@ export default class BenzAMRRecorder {
             xhr.send();
         });
         return p.then((array) => {
-            return this.initWithArrayBuffer(array, audioType);
+            return this.initWithArrayBuffer(array);
         });
     }
 
@@ -211,6 +209,25 @@ export default class BenzAMRRecorder {
             });
         });
     }
+
+    /**
+     * 根据文件头判断文件类型
+     * @param {Float32Array} array 
+     */
+    getAudioType(array) {
+        let headerArray = new Int8Array(array.slice(0, 8));
+        let header = String.fromCharCode(...headerArray);
+        
+        if(header === '#!AMR-WB') {
+            return 'audio/amr-wb';
+        }
+
+        if(header.includes('AMR')) {
+            return 'audio/amr';
+        }
+
+        return 'audio/other'
+    };
 
     /**
      * init 之前先播放一个空音频。
